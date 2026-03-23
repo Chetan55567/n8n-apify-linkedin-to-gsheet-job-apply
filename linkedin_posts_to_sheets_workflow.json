@@ -1,0 +1,1719 @@
+{
+  "name": "LinkedIn Posts to Google Sheets via Apify - Open Source",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "67356f89-fdbb-4222-96de-e46048e92e7b",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -1968,
+        1344
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f18e6e41-8136-4348-afaf-b6f063f0af02-a1",
+              "name": "apifyToken",
+              "value": "{{APIFY_API_TOKEN}}",
+              "type": "string"
+            },
+            {
+              "id": "f18e6e41-8136-4348-afaf-b6f063f0af02-a2",
+              "name": "keywords",
+              "value": "fresher gurgaon hiring",
+              "type": "string"
+            },
+            {
+              "id": "f18e6e41-8136-4348-afaf-b6f063f0af02-a3",
+              "name": "spreadsheetId",
+              "value": "{{GOOGLE_SHEET_ID}}",
+              "type": "string"
+            },
+            {
+              "id": "f18e6e41-8136-4348-afaf-b6f063f0af02-a4",
+              "name": "sheetName",
+              "value": "posts",
+              "type": "string"
+            },
+            {
+              "id": "f18e6e41-8136-4348-afaf-b6f063f0af02-a5",
+              "name": "maxPosts",
+              "value": "5",
+              "type": "string"
+            },
+            {
+              "id": "f18e6e41-8136-4348-afaf-b6f063f0af02-a6",
+              "name": "sortBy",
+              "value": "date",
+              "type": "string"
+            },
+            {
+              "id": "f18e6e41-8136-4348-afaf-b6f063f0af02-a7",
+              "name": "postedLimit",
+              "value": "month",
+              "type": "string"
+            },
+            {
+              "id": "f18e6e41-8136-4348-afaf-b6f063f0af02-a8",
+              "name": "scrapeComments",
+              "value": "false",
+              "type": "string"
+            },
+            {
+              "id": "f18e6e41-8136-4348-afaf-b6f063f0af02-a9",
+              "name": "scrapeReactions",
+              "value": "false",
+              "type": "string"
+            },
+            {
+              "id": "f18e6e41-8136-4348-afaf-b6f063f0af02-a10",
+              "name": "maxComments",
+              "value": "0",
+              "type": "string"
+            },
+            {
+              "id": "f18e6e41-8136-4348-afaf-b6f063f0af02-a11",
+              "name": "maxReactions",
+              "value": "0",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "b068d942-a9e7-43ab-9c14-d8a4b39b6ec0",
+      "name": "Set Inputs (Edit Before Active)",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1520,
+        1344
+      ],
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "jsCode": "function toBool(value, fallback = false) {\n  if (typeof value === 'boolean') return value;\n  if (value === undefined || value === null || value === '') return fallback;\n  const normalized = String(value).trim().toLowerCase();\n  return ['true', '1', 'yes', 'y'].includes(normalized);\n}\n\nfunction toInt(value, fallback) {\n  const n = Number(value);\n  if (!Number.isFinite(n) || n < 0) return fallback;\n  return Math.floor(n);\n}\n\nfunction normalizeKeywords(value) {\n  if (Array.isArray(value)) return value.map((v) => String(v).trim()).filter(Boolean);\n  return String(value || '')\n    .split(',')\n    .map((v) => v.trim())\n    .filter(Boolean);\n}\n\nconst items = $input.all();\n\nconst payload = items[0].json || {};\n\nconst apifyToken = String(payload.apifyToken || '').trim();\nconst keywords = normalizeKeywords(payload.keywords || payload.searchQueries || payload.search_queries);\nconst spreadsheetId = String(payload.spreadsheetId || '').trim();\nconst sheetName = String(payload.sheetName || 'Sheet1').trim();\n\nconst maxPosts = toInt(payload.maxPosts, 30);\nconst sortBy = ['relevance', 'date'].includes(String(payload.sortBy || '').toLowerCase())\n  ? String(payload.sortBy).toLowerCase()\n  : 'date';\nconst postedLimit = String(payload.postedLimit || 'month').trim();\nconst scrapeComments = toBool(payload.scrapeComments, false);\nconst scrapeReactions = toBool(payload.scrapeReactions, false);\nconst maxComments = toInt(payload.maxComments, 0);\nconst maxReactions = toInt(payload.maxReactions, 0);\n\nconst missing = [];\nif (!apifyToken) missing.push('apifyToken');\nif (!keywords.length) missing.push('keywords');\nif (!spreadsheetId) missing.push('spreadsheetId');\nif (!sheetName) missing.push('sheetName');\n\nconst apifyInput = {\n  searchQueries: keywords,\n  maxPosts,\n  sortBy,\n  postedLimit,\n  scrapeComments,\n  scrapeReactions,\n  maxComments,\n  maxReactions\n};\n\nreturn [{\n  json: {\n    isValid: missing.length === 0,\n    missingFields: missing,\n    apifyToken,\n    spreadsheetId,\n    sheetName,\n    keywordsCsv: keywords.join(', '),\n    apifyInput\n  }\n}];"
+      },
+      "id": "d5806149-3011-4217-b1aa-e07c85c5a22a",
+      "name": "Normalize Inputs",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1296,
+        1344
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "f18e6e41-8136-4348-afaf-b6f063f0af04-cond",
+              "leftValue": "={{$json.isValid}}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "59f7f750-09ce-4548-a89d-4de9ffdf9554",
+      "name": "Inputs Valid?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -1072,
+        1344
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.apify.com/v2/acts/harvestapi~linkedin-post-search/run-sync-get-dataset-items",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "token",
+              "value": "={{$json.apifyToken}}"
+            },
+            {
+              "name": "clean",
+              "value": "true"
+            },
+            {
+              "name": "format",
+              "value": "json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{$json.apifyInput}}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 300000
+        }
+      },
+      "id": "9050f447-2b71-4505-9190-9c1031b892e5",
+      "name": "Run Apify Actor",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "position": [
+        -848,
+        1248
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "function pick(obj, paths, fallback = '') {\n  for (const path of paths) {\n    const chunks = path.split('.');\n    let cur = obj;\n    for (const c of chunks) cur = cur?.[c];\n    if (cur !== undefined && cur !== null && String(cur).trim() !== '') return cur;\n  }\n  return fallback;\n}\n\nconst cfg = $('Normalize Inputs').first().json;\nconst raw = [];\n\nfor (const item of items) {\n  const j = item.json;\n  if (Array.isArray(j)) {\n    raw.push(...j);\n    continue;\n  }\n  if (Array.isArray(j?.data)) {\n    raw.push(...j.data);\n    continue;\n  }\n  if (Array.isArray(j?.items)) {\n    raw.push(...j.items);\n    continue;\n  }\n  if (Array.isArray(j?.body)) {\n    raw.push(...j.body);\n    continue;\n  }\n  if (j && typeof j === 'object' && (j.linkedinUrl || j.postUrl || j.url || j.content)) {\n    raw.push(j);\n  }\n}\n\nconst rows = raw\n  .filter((p) => p && typeof p === 'object')\n  .map((post) => ({\n    hasRows: true,\n    linkedinposturl: String(pick(post, ['linkedinUrl', 'postUrl', 'url'], '')),\n    content: String(pick(post, ['content', 'text', 'postText'], ''))\n  }))\n  .filter((r) => r.linkedinposturl || r.content);\n\nif (!rows.length) {\n  return [{\n    json: {\n      hasRows: false,\n      rowCount: 0,\n      keyword_input: cfg.keywordsCsv,\n      message: 'No posts were returned by Apify actor for the provided keywords.'\n    }\n  }];\n}\n\nreturn rows.map((r) => ({ json: r }));"
+      },
+      "id": "a9edb32b-36ca-4504-a85c-2151faf59af4",
+      "name": "Parse Actor Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -624,
+        1248
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "f18e6e41-8136-4348-afaf-b6f063f0af07-cond",
+              "leftValue": "={{$json.hasRows}}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "98fee4f2-e1d2-4ec1-907a-b286d203a43d",
+      "name": "Has Rows?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -400,
+        1248
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{$('Normalize Inputs').first().json.spreadsheetId}}"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "posts",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "hasRows",
+              "displayName": "hasRows",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "linkedinposturl",
+              "displayName": "linkedinposturl",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "content",
+              "displayName": "content",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "2b1b74d3-673f-4d3a-8c1d-2af5de416925",
+      "name": "Append Rows to Google Sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        -176,
+        1056
+      ],
+      "executeOnce": false,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "{{GOOGLE_SHEETS_CREDENTIAL_ID}}",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const cfg = $('Normalize Inputs').first().json;\nreturn [{\n  json: {\n    success: true,\n    message: `Stored ${items.length} LinkedIn posts into Google Sheets.`,\n    rows_written: items.length,\n    spreadsheet_id: cfg.spreadsheetId,\n    sheet_name: cfg.sheetName,\n    keywords: cfg.keywordsCsv,\n    actor_id: 'harvestapi~linkedin-post-search',\n    generated_at: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "41b7e2af-db5d-4296-b63b-6785a480c130",
+      "name": "Prepare Success Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        48,
+        1056
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{\n  json: {\n    success: false,\n    message: item.json.message || 'No data to write into Google Sheets.',\n    rows_written: 0,\n    keywords: item.json.keyword_input || '',\n    actor_id: 'harvestapi~linkedin-post-search',\n    generated_at: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "2dca8cc1-a857-4315-b972-25723a5b14e3",
+      "name": "Prepare No Data Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -176,
+        1248
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{\n  json: {\n    success: false,\n    message: 'Missing required input fields. Update Set Inputs (Edit Before Active).',\n    required_fields: ['apifyToken', 'keywords', 'spreadsheetId', 'sheetName'],\n    missing_fields: item.json.missingFields || [],\n    generated_at: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "027c3563-c397-4a81-ab69-63e985f11b33",
+      "name": "Prepare Input Error Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -848,
+        1440
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const seen = new Set();\nconst column = \"linkedinposturl\"; // change this to your column name\n\nreturn items.filter(item => {\n  const value = item.json[column];\n\n  if (!value) return false; // drop empty values (optional)\n\n  if (seen.has(value)) {\n    return false;\n  } else {\n    seen.add(value);\n    return true;\n  }\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        720,
+        1056
+      ],
+      "id": "cbd564e4-9c02-429f-a6ad-e0838b66c22a",
+      "name": "Deduplicate Rows"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        1808,
+        1664
+      ],
+      "id": "b4d7ac89-2388-4811-a400-7ae242e914a1",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "{{AI_API_BASE_URL}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{AI_API_KEY}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {\n  model: 'Kimi',\n  temperature: 1.0,\n  messages: [\n    {\n      role: 'system',\n      content: 'You are a strict JSON extraction engine. Return only valid JSON.'\n    },\n    {\n      role: 'user',\n      content: 'Content:\\n' + $json[\"content\"] + '\\n\\nLinkedinposturl:\\n' + $json[\"linkedinposturl\"] + '\\n\\nExtract job post info in JSON format with fields: is_job_post,linkedinposturl, role_name, company_name, apply_url, apply_email,is_apply_email, location, experience.'\n    }\n  ]\n} }}",
+        "options": {}
+      },
+      "id": "aa20cb98-cdbe-40f8-979f-beba7199e5c3",
+      "name": "AI Extract Job Info",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2064,
+        720
+      ],
+      "executeOnce": false
+    },
+    {
+      "parameters": {
+        "jsCode": "let raw;\n\n// Case 1: OpenAI-style response\nif ($json.choices?.[0]?.message?.content) {\n  raw = $json.choices[0].message.content;\n}\n\n// Case 2: New response format (output → content → text)\nelse if ($json.output?.[0]?.content?.[0]?.text) {\n  raw = $json.output[0].content[0].text;\n}\n\nelse {\n  throw new Error(\"Unsupported AI response format\");\n}\n\n// Step 1: remove markdown fences if present\nlet cleaned = raw\n  .replace(/```json/g, '')\n  .replace(/```/g, '')\n  .trim();\n\n// Step 2: extract JSON block\nconst match = cleaned.match(/\\{[\\s\\S]*\\}/);\n\nif (!match) {\n  throw new Error(\"No valid JSON found in AI response\");\n}\n\n// Step 3: parse JSON\nlet parsed;\ntry {\n  parsed = JSON.parse(match[0]);\n} catch (e) {\n  throw new Error(\"JSON parsing failed: \" + e.message);\n}\n\n// Step 4: return structured output\nreturn [\n  {\n    json: parsed\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2288,
+        720
+      ],
+      "id": "b2daa2e6-9178-4f88-8db0-2f53d0e655b4",
+      "name": "ParsedJobInfo"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "c1839830-1c81-4414-aab1-55b3b9b833c4",
+              "leftValue": "={{ $json.apply_email }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "e0181afd-7628-4f9d-ab89-10f2e578d44b",
+              "leftValue": "={{ $json.apply_email }}",
+              "rightValue": "@",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2736,
+        864
+      ],
+      "id": "ea76df1d-8a4e-4a28-acef-fff1fec6bfe5",
+      "name": "If",
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "{{DRIVE_FILE_ID}}"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        3632,
+        768
+      ],
+      "id": "30517cb9-41d4-4fdb-a862-bd9ae271ba7d",
+      "name": "Download file",
+      "executeOnce": true,
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "{{GOOGLE_DRIVE_CREDENTIAL_ID}}",
+          "name": "Google Drive OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "let raw;\n\n// Case 1: OpenAI-style response\nif ($json.choices?.[0]?.message?.content) {\n  raw = $json.choices[0].message.content;\n}\n\n// Case 2: New response format (output → content → text)\nelse if ($json.output?.[0]?.content?.[0]?.text) {\n  raw = $json.output[0].content[0].text;\n}\n\nelse {\n  throw new Error(\"Unsupported AI response format\");\n}\n// Continue\n//const raw = $json.choices?.[0]?.message?.content;\n//const raw = $json.choices?.[0]?.message?.content;\nif (!raw) {\n  throw new Error(\"Empty AI response\");\n}\n\n// Remove markdown fences\nlet cleaned = raw\n  .replace(/```json/g, '')\n  .replace(/```/g, '')\n  .trim();\n\n// Extract JSON block\nconst match = cleaned.match(/\\{[\\s\\S]*\\}/);\n\nif (!match) {\n  throw new Error(\"No JSON found in AI response\");\n}\n\nlet parsed;\ntry {\n  parsed = JSON.parse(match[0]);\n} catch (e) {\n  throw new Error(\"Invalid JSON format from AI\");\n}\n\n// Basic validation\nif (!parsed.subject || !parsed.body_html) {\n  throw new Error(\"Missing subject or body\");\n}\n\nreturn [\n  {\n    json: {\n      ...$json,            // keep previous fields\n      email_subject: parsed.subject,\n      email_body: parsed.body_html\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3408,
+        768
+      ],
+      "id": "a9fbab5e-7494-4eae-a0f1-eb3f6d72eb52",
+      "name": "Parse Email Output"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('If').item.json.apply_email }}",
+        "subject": "={{ $json.email_subject }}",
+        "message": "={{ $json.email_body }}",
+        "options": {
+          "appendAttribution": false,
+          "attachmentsUi": {
+            "attachmentsBinary": [
+              {}
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        3856,
+        768
+      ],
+      "id": "4ef06116-8db7-48bd-bb9a-391a58f0d454",
+      "name": "Send a message",
+      "webhookId": "c8e5ada8-6364-4dac-b950-c069a4f9531e",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "{{GMAIL_CREDENTIAL_ID}}",
+          "name": "Gmail OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "={{$('Normalize Inputs').first().json.spreadsheetId}}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1897413190,
+          "mode": "list",
+          "cachedResultName": "appliedemailjobs",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/{{GOOGLE_SHEET_ID}}/edit#gid=1897413190"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "post_url",
+              "displayName": "post_url",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "apply_email",
+              "displayName": "apply_email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "role_name",
+              "displayName": "role_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "company_name",
+              "displayName": "company_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "applied_at",
+              "displayName": "applied_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        4304,
+        768
+      ],
+      "id": "d8aeff45-6de8-4dbb-9b97-20f072b1600f",
+      "name": "Append or update row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "{{GOOGLE_SHEETS_CREDENTIAL_ID}}",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "={{$('Normalize Inputs').first().json.spreadsheetId}}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "deduplicate",
+          "mode": "name"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1168,
+        1056
+      ],
+      "id": "7ab1acd8-fdf7-439a-9744-ca338f92ba1e",
+      "name": "Deduplicate Sheet",
+      "executeOnce": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "{{GOOGLE_SHEETS_CREDENTIAL_ID}}",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "amount": 10
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        2960,
+        768
+      ],
+      "id": "87673121-d079-4c67-8bc7-509b4444b3ee",
+      "name": "Wait",
+      "webhookId": "8d1b439d-789b-409a-940e-480d2def54b7"
+    },
+    {
+      "parameters": {
+        "amount": 10
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        2960,
+        960
+      ],
+      "id": "7f0f8f0f-c9c1-499a-8415-88af8a470dd1",
+      "name": "Wait1",
+      "webhookId": "205685ff-16b3-44ef-a6dd-4f87c284cc15"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "{{AI_API_BASE_URL}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{AI_API_KEY}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {\n  model: 'Kimi',\n  temperature: 0.25,\n  messages: [\n    {\n      role: 'system',\n      content: 'You are a professional job application assistant. Generate clean, natural, human-like emails.'\n    },\n    {\n      role: 'user',\n      content: `Generate a job application email.\n\nJob Details:\nRole: ${$json.role_name || 'the role'}\nCompany: ${$json.company_name || 'the company'}\nLocation: ${$json.location || 'N/A'}\nExperience Required: ${$json.experience || 'N/A'}\n\nJob Content:\n${$('Applied Job Check').item.json.content}\n\nCandidate Details:\nName: {{CANDIDATE_NAME}}\nSkills: Analyst, Excel, Cloud (Beginner), Quick Learner, Adaptable\nExperience: Currently working at {{CURRENT_COMPANY}} as an analyst since July 2025.\nMobile: {{CANDIDATE_PHONE}}\n\nInstructions:\n- Generate BOTH subject and email body\n- Email must be formatted in clean HTML (use <p> tags, spacing)\n- Keep paragraphs short and readable\n- Keep tone natural and human (NOT robotic)\n- Avoid generic phrases like \"I am excited\"\n- Mention where the job was found\n- Do NOT include any footer, watermark, or tool name\n- Close to 250 words\n- Add like ready to join asap and highlight that text\n- No placeholders\n\nOutput STRICT JSON:\n{\n  \"subject\": \"...\",\n  \"body_html\": \"...\"\n}`\n    }\n  ]\n} }}",
+        "options": {}
+      },
+      "id": "9a142e17-a486-4831-8b01-c0c4d9acdb33",
+      "name": "Email Preparation AI",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3184,
+        768
+      ]
+    },
+    {
+      "parameters": {
+        "amount": 10
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        4528,
+        912
+      ],
+      "id": "602b3f3b-d3f9-40e3-b3a6-7881fcf831f1",
+      "name": "Wait2",
+      "webhookId": "cec6e4e5-db48-4a56-a7d0-963c0195ca2f"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "{{GOOGLE_SHEET_ID}}"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "posts",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/{{GOOGLE_SHEET_ID}}/edit#gid=0"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        496,
+        1056
+      ],
+      "id": "63e076a5-302d-4214-8186-00e34c850338",
+      "name": "Get row(s) in posts",
+      "executeOnce": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "{{GOOGLE_SHEETS_CREDENTIAL_ID}}",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "clear",
+        "documentId": {
+          "__rl": true,
+          "value": "={{$('Normalize Inputs').first().json.spreadsheetId}}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "deduplicate",
+          "mode": "name"
+        }
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        272,
+        1056
+      ],
+      "id": "40fe8e56-d188-418d-8c47-3ce35ea7b71f",
+      "name": "Clear deduplicate sheet",
+      "executeOnce": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "{{GOOGLE_SHEETS_CREDENTIAL_ID}}",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "={{$('Normalize Inputs').first().json.spreadsheetId}}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "deduplicate",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "hasRows",
+              "displayName": "hasRows",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "linkedinposturl",
+              "displayName": "linkedinposturl",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "content",
+              "displayName": "content",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        944,
+        1056
+      ],
+      "id": "db9bf174-9c30-4e5a-a400-88f2c0dc6f62",
+      "name": "Append row in deduplicate sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "{{GOOGLE_SHEETS_CREDENTIAL_ID}}",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "={{$('Normalize Inputs').first().json.spreadsheetId}}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "parsedaioutput",
+          "mode": "name"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2960,
+        576
+      ],
+      "id": "ab1f26bb-5333-4370-b8d6-ede614939d28",
+      "name": "Get parsedaioutput sheet",
+      "executeOnce": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "{{GOOGLE_SHEETS_CREDENTIAL_ID}}",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const seen = new Set();\nconst column = \"linkedinposturl\"; // change this to your column name\n\nreturn items.filter(item => {\n  const value = item.json[column];\n\n  if (!value) return false; // drop empty values (optional)\n\n  if (seen.has(value)) {\n    return false;\n  } else {\n    seen.add(value);\n    return true;\n  }\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3184,
+        576
+      ],
+      "id": "1fa28ed3-47f5-4d9c-a29b-6e1842865e4c",
+      "name": "Deduplicate parsedaioutput"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "={{$('Normalize Inputs').first().json.spreadsheetId}}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 231922205,
+          "mode": "list",
+          "cachedResultName": "parsedaideduplicate",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/{{GOOGLE_SHEET_ID}}/edit#gid=231922205"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "is_job_post",
+              "displayName": "is_job_post",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "linkedinposturl",
+              "displayName": "linkedinposturl",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "role_name",
+              "displayName": "role_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "company_name",
+              "displayName": "company_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "apply_url",
+              "displayName": "apply_url",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "apply_email",
+              "displayName": "apply_email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "is_apply_email",
+              "displayName": "is_apply_email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "location",
+              "displayName": "location",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "experience",
+              "displayName": "experience",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        3408,
+        576
+      ],
+      "id": "4e1e008e-2f14-42aa-9c2a-166307a90427",
+      "name": "parsedaioutput update",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "{{GOOGLE_SHEETS_CREDENTIAL_ID}}",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return [\n  {\n    json: {\n      post_url: $('If').item.json.linkedinposturl,\n      apply_email: $('If').item.json.apply_email,\n      role_name: $('If').item.json.role_name,\n      company_name: $('If').item.json.company_name,\n      status: \"applied\",\n      applied_at: new Date().toISOString()\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4080,
+        768
+      ],
+      "id": "4e73bff4-e1ee-40fd-a783-b8c61687b0b7",
+      "name": "Return Job Apply Info"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "={{$('Normalize Inputs').first().json.spreadsheetId}}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "parsedaioutput",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "is_job_post",
+              "displayName": "is_job_post",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "linkedinposturl",
+              "displayName": "linkedinposturl",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "role_name",
+              "displayName": "role_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "company_name",
+              "displayName": "company_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "apply_url",
+              "displayName": "apply_url",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "apply_email",
+              "displayName": "apply_email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "is_apply_email",
+              "displayName": "is_apply_email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "location",
+              "displayName": "location",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "experience",
+              "displayName": "experience",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2512,
+        720
+      ],
+      "id": "280aa7a0-24e0-4be8-a0f5-04a9d9364e5f",
+      "name": "Append ParsedAI Output",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "{{GOOGLE_SHEETS_CREDENTIAL_ID}}",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "clear",
+        "documentId": {
+          "__rl": true,
+          "value": "={{$('Normalize Inputs').first().json.spreadsheetId}}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "parsedaideduplicate",
+          "mode": "name"
+        }
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2736,
+        576
+      ],
+      "id": "ba5f8be6-dda8-4795-a0c6-4d14be672d2e",
+      "name": "parsedaideduplicate clear",
+      "executeOnce": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "{{GOOGLE_SHEETS_CREDENTIAL_ID}}",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "{{GOOGLE_SHEET_ID}}",
+          "mode": "list",
+          "cachedResultName": "{{SPREADSHEET_NAME}}",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/{{GOOGLE_SHEET_ID}}/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1897413190,
+          "mode": "list",
+          "cachedResultName": "appliedemailjobs",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/{{GOOGLE_SHEET_ID}}/edit#gid=1897413190"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -1744,
+        1344
+      ],
+      "id": "efdc4cc1-2cda-455c-ac8b-f60932c679ed",
+      "name": "Get Applied Jobs",
+      "executeOnce": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "{{GOOGLE_SHEETS_CREDENTIAL_ID}}",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "ce833cce-9236-48a3-9b46-bab5cc13c4c3",
+              "leftValue": "={{ $json.exists }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1840,
+        720
+      ],
+      "id": "ea97ba4f-9020-4380-a29a-d61f67426785",
+      "name": "Already Applied"
+    },
+    {
+      "parameters": {
+        "jsCode": "const appliedUrls = new Set(\n  $items(\"Get Applied Jobs\").map(i => i.json.post_url)\n);\n\nconst item = items[0];\n\nconst exists = appliedUrls.has(item.json.linkedinposturl);\n\nreturn [\n  {\n    json: {\n      ...item.json,\n      exists\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1616,
+        720
+      ],
+      "id": "2917c0b1-017a-4fed-b9e8-e1f614db1eef",
+      "name": "Applied Job Check"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get Applied Jobs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Inputs (Edit Before Active)": {
+      "main": [
+        [
+          {
+            "node": "Normalize Inputs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Inputs": {
+      "main": [
+        [
+          {
+            "node": "Inputs Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Inputs Valid?": {
+      "main": [
+        [
+          {
+            "node": "Run Apify Actor",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prepare Input Error Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Run Apify Actor": {
+      "main": [
+        [
+          {
+            "node": "Parse Actor Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Actor Response": {
+      "main": [
+        [
+          {
+            "node": "Has Rows?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Rows?": {
+      "main": [
+        [
+          {
+            "node": "Append Rows to Google Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prepare No Data Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append Rows to Google Sheet": {
+      "main": [
+        [
+          {
+            "node": "Prepare Success Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Success Result": {
+      "main": [
+        [
+          {
+            "node": "Clear deduplicate sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Deduplicate Rows": {
+      "main": [
+        [
+          {
+            "node": "Append row in deduplicate sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Applied Job Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Extract Job Info": {
+      "main": [
+        [
+          {
+            "node": "ParsedJobInfo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ParsedJobInfo": {
+      "main": [
+        [
+          {
+            "node": "Append ParsedAI Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Wait1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Email Output": {
+      "main": [
+        [
+          {
+            "node": "Download file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download file": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a message": {
+      "main": [
+        [
+          {
+            "node": "Return Job Apply Info",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Deduplicate Sheet": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "Email Preparation AI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait1": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email Preparation AI": {
+      "main": [
+        [
+          {
+            "node": "Parse Email Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append or update row in sheet": {
+      "main": [
+        [
+          {
+            "node": "Wait2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait2": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in posts": {
+      "main": [
+        [
+          {
+            "node": "Deduplicate Rows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clear deduplicate sheet": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in posts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append row in deduplicate sheet": {
+      "main": [
+        [
+          {
+            "node": "Deduplicate Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get parsedaioutput sheet": {
+      "main": [
+        [
+          {
+            "node": "Deduplicate parsedaioutput",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Deduplicate parsedaioutput": {
+      "main": [
+        [
+          {
+            "node": "parsedaioutput update",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Return Job Apply Info": {
+      "main": [
+        [
+          {
+            "node": "Append or update row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "parsedaioutput update": {
+      "main": [
+        []
+      ]
+    },
+    "Append ParsedAI Output": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "parsedaideduplicate clear",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "parsedaideduplicate clear": {
+      "main": [
+        [
+          {
+            "node": "Get parsedaioutput sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Applied Jobs": {
+      "main": [
+        [
+          {
+            "node": "Set Inputs (Edit Before Active)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Already Applied": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "AI Extract Job Info",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Applied Job Check": {
+      "main": [
+        [
+          {
+            "node": "Already Applied",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "9fb16429-2853-405c-a9de-d69132a8953a",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "{{N8N_INSTANCE_ID}}"
+  },
+  "id": "t5YXjLMfaPTlDwrK",
+  "tags": []
+}
