@@ -91,12 +91,6 @@ This repository contains an n8n workflow that:
 - Add error notification node (Slack/Email) for failed executions.
 - Enable execution logs with retention policy.
 
-## Publish to GitHub Checklist
-
-- [ ] Confirm all placeholders are still placeholders in JSON
-- [ ] Confirm no personal data in prompts
-- [x] MIT license file is included
-- [ ] Add `.gitignore` for local n8n/export artifacts if needed
 
 ## License and Liability
 
